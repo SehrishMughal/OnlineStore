@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import time
-from googletrans import translator
+from googletrans import Translator
 
 # --- CONFIG ---
 SEARCH_KEYWORDS = ["mens wear", "smart watch", "bedsheets"] # Add as many as you want
@@ -22,7 +22,7 @@ HEADERS = {
 def translate_text(text, target='ur'):
     try:
         # Detects if text is Chinese/English and converts to Urdu
-        return translator.translate(text, dest=target).text
+        return Translator.translate(text, dest=target).text
     except:
         return text # Returns original if translation fails
 
