@@ -1,4 +1,4 @@
 requests
 pandas
 googletrans==4.0.0-rc1
-time
+time==0.0.17
