@@ -34,6 +34,8 @@ def main():
         
         if response.status_code == 200:
             items = response.json().get('items', [])
+        if not items:
+            print(f"Warning: No items found for query '{query}'")
             for p in items:
                 original_title = p.get("productName", "")
                 
