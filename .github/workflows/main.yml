@@ -1,0 +1,32 @@
+name: Markaz Daily Catalog Sync
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every night at midnight UTC
+  workflow_dispatch:      # Allows you to run it manually for testing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: pip install requests pandas
+
+      - name: Run Markaz Scraper
+        run: python scraper.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'Markaz-Bot'
+          git config --global user.email 'bot@github.com'
+          git add markaz_catalog.csv
+          git commit -m "Update Markaz Catalog: $(date)" || echo "No changes to commit"
+          git push
