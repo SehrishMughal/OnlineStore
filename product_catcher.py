@@ -33,7 +33,7 @@ def main():
         response = requests.post(API_URL, headers=HEADERS, json=payload)
         
         if response.status_code == 200:
-            items = response.json().get('items', [])
+            items = response.json()
         if not items:
             print(f"Warning: No items found for query '{query}'")
             for p in items:
