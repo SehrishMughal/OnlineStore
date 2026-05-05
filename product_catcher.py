@@ -25,11 +25,14 @@ HEADERS = {
 translator = Translator()
 
 def translate_text(text, target='ur'):
+    if not text: return ""
     try:
-        # Note: googletrans requires .translate on the instance
-        return translator.translate(text, dest=target).text
+        # GitHub IPs are often blocked, so we use a short timeout
+        result = translator.translate(text, dest=target, timeout=3)
+        return result.text
     except Exception as e:
-        return text 
+        print(f" Translation blocked or failed (using English): {e}")
+        return text # Fallback to original text so script continues
 
 def main():
     final_list = []
