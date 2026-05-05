@@ -1,6 +1,8 @@
 import requests
 import pandas as pd
 import time
+import json   
+import gzip
 from googletrans import Translator
 
 # --- CONFIG ---
@@ -57,8 +59,7 @@ def main():
             
             print(f"Successfully decompressed and found {len(items)} items.")
             
-        if not items:
-            print(f"Warning: No items found for query '{query}'")
+        if items:
             for p in items:
                 original_title = p.get("productName", "")
                 
