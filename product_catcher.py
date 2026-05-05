@@ -94,7 +94,7 @@ def main():
         entry["title_urdu"] = translate_text(entry["title"], 'ur')
 
     # --- SAVE ---
-    df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
+    #df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
     df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
     print(f"Success! {len(df)} total items saved to {OUTPUT_CSV}")
 
