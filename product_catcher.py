@@ -25,14 +25,16 @@ HEADERS = {
 translator = Translator()
 
 def translate_text(text, target='ur'):
-    if not text: return ""
+    if not text or text == "Product": 
+        return text
     try:
-        # GitHub IPs are often blocked, so we use a short timeout
-        result = translator.translate(text, dest=target, timeout=3)
+        # Removed the 'timeout' argument from here
+        result = translator.translate(text, dest=target)
         return result.text
     except Exception as e:
-        print(f" Translation blocked or failed (using English): {e}")
-        return text # Fallback to original text so script continues
+        # This will now only trigger on actual blocks/network errors
+        print(f" Translation failed: {e}")
+        return text
 
 def main():
     final_list = []
