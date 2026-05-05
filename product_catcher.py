@@ -6,7 +6,7 @@ import gzip
 from googletrans import Translator
 
 # --- CONFIG ---
-SEARCH_KEYWORDS = ["mens wear", "smart watch", "bedsheets", "bags"]
+SEARCH_KEYWORDS = ["shirts", "smart watch", "bedsheets", "bags"]
 API_URL = "https://api.markaz.app/products/v2/search?page=1"
 OUTPUT_CSV = "markaz_catalog.csv"
 
@@ -64,11 +64,12 @@ def main():
                 for p in items:
                     # Capture everything immediately
                     name = p.get("name") or p.get("productName") or "Product"
-                    
+                    id = p.get("id") or p.get("productId")
                     # We will translate this later or keep a fallback
                     final_list.append({
-                        "id": p.get("id") or p.get("productId"),
+                        "id": id+name,
                         "title": name, # Initial title is English
+                        "title_urdu": "placeholder",
                         "description": p.get("description", "Quality product"),
                         "price": f"{p.get('price') or p.get('salePrice')} PKR",
                         "image_link": p.get("image") or p.get("primaryImage"),
@@ -90,7 +91,7 @@ def main():
     print(f"\nTranslating {len(final_list)} unique items to Urdu...")
     for entry in final_list:
         # We only translate if we haven't been blocked yet
-        entry["title"] = translate_text(entry["title"], 'ur')
+        entry["title_urdu"] = translate_text(entry["title"], 'ur')
 
     # --- SAVE ---
     df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
