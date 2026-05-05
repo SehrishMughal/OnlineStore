@@ -33,7 +33,30 @@ def main():
         response = requests.post(API_URL, headers=HEADERS, json=payload)
         
         if response.status_code == 200:
-            items = response.json()
+
+            # Check if the content is actually compressed
+            if response.headers.get('Content-Encoding') == 'gzip':
+                try:
+                    # Decompress the raw bytes
+                    decoded_content = gzip.decompress(response.content)
+                    data = json.loads(decoded_content)
+                except Exception as e:
+                    print(f"Gzip decompression failed: {e}")
+                    data = []
+            else:
+                # Fallback if it's not gzipped
+                data = response.json()
+            
+            # Now handle the list structure you found earlier
+            if isinstance(data, list):
+                items = data
+            elif isinstance(data, dict):
+                items = data.get('items', [])
+            else:
+                items = []
+            
+            print(f"Successfully decompressed and found {len(items)} items.")
+            
         if not items:
             print(f"Warning: No items found for query '{query}'")
             for p in items:
