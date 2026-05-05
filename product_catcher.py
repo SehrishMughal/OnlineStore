@@ -67,7 +67,7 @@ def main():
                     id = p.get("id") or p.get("productId")
                     # We will translate this later or keep a fallback
                     final_list.append({
-                        "id": id+name,
+                        "id": str(id)+name,
                         "title": name, # Initial title is English
                         "title_urdu": "placeholder",
                         "description": p.get("description", "Quality product"),
