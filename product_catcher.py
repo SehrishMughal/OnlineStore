@@ -37,66 +37,63 @@ def translate_text(text, target='ur'):
 def main():
     final_list = []
     for query in SEARCH_KEYWORDS:
-        print(f"Searching for: {query}...")
-        payload = {"searchQuery": query, "pageNumber": 1, "pageSize": 20}
+        print(f"--- Fetching {query} ---")
+        # Increase pageSize to 50 to get more data per request
+        payload = {"searchQuery": query, "pageNumber": 1, "pageSize": 50}
         
         try:
-            response = requests.post(API_URL, headers=HEADERS, json=payload)
+            response = requests.post(API_URL, headers=HEADERS, json=payload, timeout=20)
             
             if response.status_code == 200:
-                #Handle Gzip
-                if response.headers.get('Content-Encoding') == '':
-                    
-                    data = json.loads(response.content)
+                # Automatic decompression check
+                if 'gzip' in response.headers.get('Content-Encoding', ''):
+                    data = json.loads(gzip.decompress(response.content))
                 else:
                     data = response.json()
                 
-                #Handle Data Structure
-                if isinstance(data, list):
-                    items = data
-                elif isinstance(data, dict):
-                    items = data.get('items', [])
-                else:
-                    items = []
+                items = data if isinstance(data, list) else data.get('items', [])
+                
+                if not items:
+                    print(f"No items found for {query}")
+                    continue
 
-                #if items EXIST
-                if items:
-                    print(f"Found {len(items)} items. Processing...")
-                    for p in items:
-                        original_title = p.get("name") or p.get("productName") or ""
-                        
-                        # Translate
-                        urdu_title = translate_text(original_title, 'ur')
-                        
-                        final_list.append({
-                            "id": p.get("id") or p.get("productId"),
-                            "title": urdu_title, # Using the translated title
-                            "original_title": original_title,
-                            "description": p.get("description", "Quality product from Markaz"),
-                            "availability": "in stock",
-                            "condition": "new",
-                            "price": f"{p.get('price') or p.get('salePrice')} PKR",
-                            "link": "https://facebook.com/yourstore",
-                            "image_link": p.get("image") or p.get("primaryImage"),
-                            "brand": "Markaz",
-                            "product_type": query
-                        })
-                else:
-                    print(f" Warning: No items found for query '{query}'")
+                print(f"Found {len(items)} items. Processing...")
+                
+                for p in items:
+                    # Capture everything immediately
+                    name = p.get("name") or p.get("productName") or "Product"
+                    
+                    # We will translate this later or keep a fallback
+                    final_list.append({
+                        "id": p.get("id") or p.get("productId"),
+                        "title": name, # Initial title is English
+                        "description": p.get("description", "Quality product"),
+                        "price": f"{p.get('price') or p.get('salePrice')} PKR",
+                        "image_link": p.get("image") or p.get("primaryImage"),
+                        "product_type": query
+                    })
             else:
-                print(f"API Error: {response.status_code}")
+                print(f"API Error {response.status_code}")
 
         except Exception as e:
-            print(f"Critical error during query '{query}': {e}")
+            print(f"Request failed for {query}: {e}")
+        
+        time.sleep(1) # Short sleep to avoid Markaz API ban
 
-        time.sleep(2)
+    if not final_list:
+        print("No data collected at all.")
+        return
 
-    if final_list:
-        df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
-        df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig') # utf-8-sig helps Excel show Urdu correctly
-        print(f"Sync Complete! {len(df)} unique products saved to {OUTPUT_CSV}")
-    else:
-        print("Final list is empty. No CSV generated.")
+    # --- BATCH TRANSLATION ---
+    print(f"\nTranslating {len(final_list)} unique items to Urdu...")
+    for entry in final_list:
+        # We only translate if we haven't been blocked yet
+        entry["title"] = translate_text(entry["title"], 'ur')
+
+    # --- SAVE ---
+    df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
+    df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
+    print(f"Success! {len(df)} total items saved to {OUTPUT_CSV}")
 
 if __name__ == "__main__":
     main()
