@@ -7,7 +7,6 @@ from googletrans import Translator
 
 # --- CONFIG ---
 SEARCH_KEYWORDS = ["shirts", "smart watch", "bedsheets", "bags"]
-API_URL = "https://api.markaz.app/products/v2/search?page=1"
 OUTPUT_CSV = "markaz_catalog.csv"
 
 HEADERS = {
@@ -39,15 +38,24 @@ def translate_text(text, target='ur'):
 def main():
     final_list = []
     for query in SEARCH_KEYWORDS:
-        print(f"--- Fetching {query} ---")
-        # Increase pageSize to 50 to get more data per request
-        payload = {"searchQuery": query, "pageNumber": 1, "pageSize": 50}
+        print(f"\n--- Searching for: {query} ---")
+        
+        # 1. CLEAN URL: Remove the hardcoded ?page=1
+        # 2. Add the query to the URL (This is often how mobile APIs work)
+        clean_url = f"https://api.markaz.app/products/v2/search?searchQuery={query}&pageNumber=1&pageSize=50"
+        
+        payload = {
+            "searchQuery": query, 
+            "pageNumber": 1, 
+            "pageSize": 50
+        }
         
         try:
-            response = requests.post(API_URL, headers=HEADERS, json=payload, timeout=20)
+            # Try sending both the URL params AND the payload
+            response = requests.post(clean_url, headers=HEADERS, json=payload, timeout=20)
             
             if response.status_code == 200:
-                # Automatic decompression check
+                # Decompression logic...
                 if 'gzip' in response.headers.get('Content-Encoding', ''):
                     data = json.loads(response.content)
                 else:
@@ -55,34 +63,27 @@ def main():
                 
                 items = data if isinstance(data, list) else data.get('items', [])
                 
-                if not items:
-                    print(f"No items found for {query}")
-                    continue
+                if items:
+                    # Check the first item to see if it actually matches our query
+                    first_item_name = items[0].get('name', 'Unknown')
+                    print(f" Received {len(items)} items. First item: {first_item_name}")
+                    
+                    for p in items:
+                        # Use a composite ID to prevent overwriting
+                        p_id = p.get("id") or p.get("productId")
+                        unique_id = f"{query}_{p_id}" 
 
-                print(f"Found {len(items)} items. Processing...")
-                
-                for p in items:
-                    # Capture everything immediately
-                    name = p.get("name") or p.get("productName") or "Product"
-                    id = p.get("id") or p.get("productId")
-                    # We will translate this later or keep a fallback
-                    final_list.append({
-                        "markaz_id": id,
-                        "id": str(id)+name,
-                        "title": name, # Initial title is English
-                        "title_urdu": "placeholder",
-                        "description": p.get("description", "Quality product"),
-                        "price": f"{p.get('price') or p.get('salePrice')} PKR",
-                        "image_link": p.get("image") or p.get("primaryImage"),
-                        "product_type": query
-                    })
-            else:
-                print(f"API Error {response.status_code}")
-
-        except Exception as e:
-            print(f"Request failed for {query}: {e}")
-        
-        time.sleep(1) # Short sleep to avoid Markaz API ban
+                        final_list.append({
+                            "id": unique_id,
+                            "title": p.get("name") or p.get("productName"),
+                            "title_urdu": "placeholder",
+                            "description": p.get("description", "Quality product"),
+                            "price": f"{p.get('price') or p.get('salePrice')} PKR",
+                            "image_link": p.get("image") or p.get("primaryImage"),
+                            "product_type": query
+                        })
+                else:
+                    print(f" Server returned 0 items for {query}")
 
     if not final_list:
         print("No data collected at all.")
