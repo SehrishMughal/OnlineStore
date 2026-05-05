@@ -85,10 +85,6 @@ def main():
                 else:
                     print(f" Server returned 0 items for {query}")
 
-    if not final_list:
-        print("No data collected at all.")
-        return
-
     # --- BATCH TRANSLATION ---
     print(f"\nTranslating {len(final_list)} unique items to Urdu...")
     for entry in final_list:
