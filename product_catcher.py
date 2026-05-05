@@ -67,6 +67,7 @@ def main():
                     id = p.get("id") or p.get("productId")
                     # We will translate this later or keep a fallback
                     final_list.append({
+                        "markaz_id": id,
                         "id": str(id)+name,
                         "title": name, # Initial title is English
                         "title_urdu": "placeholder",
@@ -94,7 +95,7 @@ def main():
         entry["title_urdu"] = translate_text(entry["title"], 'ur')
 
     # --- SAVE ---
-    #df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
+    df = pd.DataFrame(final_list)
     df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
     print(f"Success! {len(df)} total items saved to {OUTPUT_CSV}")
 
