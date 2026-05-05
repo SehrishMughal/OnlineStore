@@ -47,7 +47,7 @@ def main():
             if response.status_code == 200:
                 # Automatic decompression check
                 if 'gzip' in response.headers.get('Content-Encoding', ''):
-                    data = json.loads(gzip.decompress(response.content))
+                    data = json.loads(response.content)
                 else:
                     data = response.json()
                 
