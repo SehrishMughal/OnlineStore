@@ -6,7 +6,7 @@ import gzip
 from googletrans import Translator
 
 # --- CONFIG ---
-SEARCH_KEYWORDS = ["mens wear", "smart watch", "bedsheets"]
+SEARCH_KEYWORDS = ["mens wear", "smart watch", "bedsheets", "bags"]
 API_URL = "https://api.markaz.app/products/v2/search?page=1"
 OUTPUT_CSV = "markaz_catalog.csv"
 
