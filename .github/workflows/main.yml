@@ -33,4 +33,4 @@ jobs:
           git add markaz_catalog.csv
           git commit -m "Update Markaz Catalog: $(date)" || echo "No changes to commit"
           git pull --rebase origin main
-          git push
+          git push origin main
