@@ -86,7 +86,7 @@ def main():
                     print(f" Server returned 0 items for {query}")
 
     # --- BATCH TRANSLATION ---
-    print(f"\nTranslating {len(final_list)} unique items to Urdu...")
+    #print(f"\nTranslating {len(final_list)} unique items to Urdu...")
     for entry in final_list:
         # We only translate if we haven't been blocked yet
         entry["title_urdu"] = translate_text(entry["title"], 'ur')
