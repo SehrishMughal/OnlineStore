@@ -17,7 +17,7 @@ HEADERS = {
     "build-version-code": "479",
     "build-version-name": "2.8.4",
     "os-type": "ANDROID",
-    "unique-device-id": "97e9837e15c22eb4", 
+    "unique-device-id": "PQ3B.190801.04221524", 
     "User-Agent": "ktor-client"
 }
 
