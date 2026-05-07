@@ -2,7 +2,6 @@ import requests
 import pandas as pd
 import time
 import json
-import gzip
 
 # --- CONFIG ---
 SEARCH_KEYWORDS = ["shirts", "smart watch", "bedsheets", "bags"]
@@ -31,73 +30,68 @@ def main():
                 
                 if response.status_code == 200:
                     if 'gzip' in response.headers.get('Content-Encoding', ''):
-                        data = json.loads(gzip.decompress(response.content))
+                        data = json.loads(response.content)
                     else:
                         data = response.json()
                     
                     items = data if isinstance(data, list) else data.get('products', [])
 
                     if not items:
-                        print(f"End of data reached at page {page}.")
                         break 
                     
-                    print(f"Page {page}: Found {len(items)} items.")
+                    print(f" Page {page}: Found {len(items)} items.")
                     
                     for p in items:
-                        # --- MULTI-IMAGE LOGIC ---
-                        # 1. Get the primary image
+                        # 1. Primary Image
                         primary = p.get("image") or p.get("primaryImage") or ""
                         
-                        # 2. Look for the list of all images
-                        image_list = p.get("images") or p.get("productImages") or []
+                        # 2. Extract Gallery
+                        # Markaz V4 often uses 'productImages' (list of dicts) or 'images' (list of strings)
+                        raw_images = p.get("productImages") or p.get("images") or []
                         
-                        # 3. Clean and combine images
-                        all_images = []
-                        if isinstance(image_list, list):
-                            for img in image_list:
-                                # Check if the list contains strings or objects
+                        all_urls = []
+                        if isinstance(raw_images, list):
+                            for img in raw_images:
                                 if isinstance(img, str):
-                                    all_images.append(img)
+                                    all_urls.append(img)
                                 elif isinstance(img, dict):
-                                    all_images.append(img.get("url") or img.get("image"))
+                                    # Extract URL from dict: check common keys
+                                    url_val = img.get("url") or img.get("image") or img.get("src")
+                                    if url_val:
+                                        all_urls.append(url_val)
                         
-                        # Add primary image to the front if it's not already in the list
-                        if primary and primary not in all_images:
-                            all_images.insert(0, primary)
+                        # Ensure primary is at the start and unique
+                        if primary and primary not in all_urls:
+                            all_urls.insert(0, primary)
                         
-                        # Join with commas for the CSV
-                        image_string = ",".join(filter(None, all_images))
+                        # 3. Clean up the list (remove any empty strings)
+                        all_urls = [u for u in all_urls if u.startswith('http')]
 
                         final_list.append({
                             "id": p.get("id") or p.get("productId"),
                             "title": p.get("name") or p.get("productName"),
                             "price": p.get("price") or p.get("salePrice"),
-                            "currency": "PKR",
-                            "description": p.get("description", "Quality product from Markaz"),
-                            "main_image": primary,
-                            "all_images": image_string, # <--- All pictures here
-                            "product_type": query,
-                            "stock": p.get("stock", "In Stock")
+                            "image_1": all_urls[0] if len(all_urls) > 0 else "",
+                            "image_2": all_urls[1] if len(all_urls) > 1 else "",
+                            "image_3": all_urls[2] if len(all_urls) > 2 else "",
+                            "image_4": all_urls[3] if len(all_urls) > 3 else "",
+                            "image_5": all_urls[4] if len(all_urls) > 4 else "",
+                            "all_images_comma": ",".join(all_urls), # Best for Facebook/Google Feed
+                            "product_type": query
                         })
                 else:
-                    print(f"Page {page} Error: {response.status_code}")
                     break
 
             except Exception as e:
-                print(f"Page {page} failed: {e}")
+                print(f" Error: {e}")
                 break
             
             time.sleep(0.5)
 
-    if not final_list:
-        print("Final list is empty!")
-        return
-
-    df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
-    df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8')
-    
-    print(f"\n--- COMPLETE ---")
-    print(f"Saved {len(df)} products with multi-image support to {OUTPUT_CSV}")
+    if final_list:
+        df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
+        df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8')
+        print(f"\n Done! Saved {len(df)} products with full galleries.")
 
 if __name__ == "__main__":
     main()
