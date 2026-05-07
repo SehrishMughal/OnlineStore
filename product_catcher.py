@@ -20,14 +20,13 @@ def main():
     final_list = []
     
     for query in SEARCH_KEYWORDS:
-        print(f"\n Scrapping Keyword: {query}")
-        
+        print(f"\n Scrapping: {query}")
         for page in range(1, MAX_PAGES + 1):
+            # Using the V4 Path you confirmed
             url = f"https://apiv2.markaz.app/marketplace/products/search/v4/{page}/0/{query}"
             
             try:
                 response = requests.get(url, headers=HEADERS, timeout=15)
-                
                 if response.status_code == 200:
                     if 'gzip' in response.headers.get('Content-Encoding', ''):
                         data = json.loads(response.content)
@@ -35,63 +34,60 @@ def main():
                         data = response.json()
                     
                     items = data if isinstance(data, list) else data.get('products', [])
-
-                    if not items:
-                        break 
+                    if not items: break 
                     
-                    print(f" Page {page}: Found {len(items)} items.")
+                    print(f"Page {page}: Found {len(items)} items.")
                     
                     for p in items:
-                        # 1. Primary Image
-                        primary = p.get("image") or p.get("primaryImage") or ""
-                        
-                        # 2. Extract Gallery
-                        # Markaz V4 often uses 'productImages' (list of dicts) or 'images' (list of strings)
+                        # 1. Grab all possible image sources
+                        # The Alibaba links you provided are almost always in 'productImages'
                         raw_images = p.get("productImages") or p.get("images") or []
                         
-                        all_urls = []
+                        # 2. Extract URLs into a flat list
+                        urls = []
                         if isinstance(raw_images, list):
                             for img in raw_images:
                                 if isinstance(img, str):
-                                    all_urls.append(img)
+                                    urls.append(img)
                                 elif isinstance(img, dict):
-                                    # Extract URL from dict: check common keys
-                                    url_val = img.get("url") or img.get("image") or img.get("src")
-                                    if url_val:
-                                        all_urls.append(url_val)
+                                    # Handles cases where it's a list of objects
+                                    u = img.get("url") or img.get("image") or img.get("src")
+                                    if u: urls.append(u)
                         
-                        # Ensure primary is at the start and unique
-                        if primary and primary not in all_urls:
-                            all_urls.insert(0, primary)
-                        
-                        # 3. Clean up the list (remove any empty strings)
-                        all_urls = [u for u in all_urls if u.startswith('http')]
+                        # 3. Fallback: if list is empty, use the single primary image
+                        if not urls:
+                            primary = p.get("image") or p.get("primaryImage")
+                            if primary: urls.append(primary)
 
+                        # 4. Map the first 6 images to specific columns
                         final_list.append({
                             "id": p.get("id") or p.get("productId"),
                             "title": p.get("name") or p.get("productName"),
-                            "price": p.get("price") or p.get("salePrice"),
-                            "image_1": all_urls[0] if len(all_urls) > 0 else "",
-                            "image_2": all_urls[1] if len(all_urls) > 1 else "",
-                            "image_3": all_urls[2] if len(all_urls) > 2 else "",
-                            "image_4": all_urls[3] if len(all_urls) > 3 else "",
-                            "image_5": all_urls[4] if len(all_urls) > 4 else "",
-                            "all_images_comma": ",".join(all_urls), # Best for Facebook/Google Feed
+                            "price": f"{p.get('price') or p.get('salePrice')} PKR",
+                            "image_1": urls[0] if len(urls) > 0 else "",
+                            "image_2": urls[1] if len(urls) > 1 else "",
+                            "image_3": urls[2] if len(urls) > 2 else "",
+                            "image_4": urls[3] if len(urls) > 3 else "",
+                            "image_5": urls[4] if len(urls) > 4 else "",
+                            "image_6": urls[5] if len(urls) > 5 else "",
+                            "all_images_comma": ",".join(urls), # Backup column with everything
                             "product_type": query
                         })
                 else:
+                    print(f" Error {response.status_code}")
                     break
-
             except Exception as e:
-                print(f" Error: {e}")
+                print(f" Failed: {e}")
                 break
             
             time.sleep(0.5)
 
     if final_list:
         df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
+        # Save to CSV
         df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8')
-        print(f"\n Done! Saved {len(df)} products with full galleries.")
+        print(f"\n SUCCESS! Captured {len(df)} products.")
+        print(f"Check the columns image_1 through image_6 in '{OUTPUT_CSV}'")
 
 if __name__ == "__main__":
     main()
