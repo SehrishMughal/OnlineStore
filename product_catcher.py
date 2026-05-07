@@ -13,7 +13,7 @@ HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json",
     "os-type": "ANDROID",
-    "unique-device-id": "97e9837e15c22eb4", 
+    "unique-device-id": "PQ3B.190801.04221524", 
     "User-Agent": "ktor-client"
 }
 
