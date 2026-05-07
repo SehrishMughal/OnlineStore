@@ -24,20 +24,17 @@ def main():
         print(f"\n Scrapping Keyword: {query}")
         
         for page in range(1, MAX_PAGES + 1):
-            # Using your discovered V4 URL structure
             url = f"https://apiv2.markaz.app/marketplace/products/search/v4/{page}/0/{query}"
             
             try:
                 response = requests.get(url, headers=HEADERS, timeout=15)
                 
                 if response.status_code == 200:
-                    # Decompress if the server sent gzipped data
                     if 'gzip' in response.headers.get('Content-Encoding', ''):
-                        data = json.loads(response.content)
+                        data = json.loads(gzip.decompress(response.content))
                     else:
                         data = response.json()
                     
-                    # V4 API usually returns a direct list
                     items = data if isinstance(data, list) else data.get('products', [])
 
                     if not items:
@@ -47,13 +44,38 @@ def main():
                     print(f"Page {page}: Found {len(items)} items.")
                     
                     for p in items:
+                        # --- MULTI-IMAGE LOGIC ---
+                        # 1. Get the primary image
+                        primary = p.get("image") or p.get("primaryImage") or ""
+                        
+                        # 2. Look for the list of all images
+                        image_list = p.get("images") or p.get("productImages") or []
+                        
+                        # 3. Clean and combine images
+                        all_images = []
+                        if isinstance(image_list, list):
+                            for img in image_list:
+                                # Check if the list contains strings or objects
+                                if isinstance(img, str):
+                                    all_images.append(img)
+                                elif isinstance(img, dict):
+                                    all_images.append(img.get("url") or img.get("image"))
+                        
+                        # Add primary image to the front if it's not already in the list
+                        if primary and primary not in all_images:
+                            all_images.insert(0, primary)
+                        
+                        # Join with commas for the CSV
+                        image_string = ",".join(filter(None, all_images))
+
                         final_list.append({
                             "id": p.get("id") or p.get("productId"),
                             "title": p.get("name") or p.get("productName"),
                             "price": p.get("price") or p.get("salePrice"),
                             "currency": "PKR",
                             "description": p.get("description", "Quality product from Markaz"),
-                            "image_link": p.get("image") or p.get("primaryImage"),
+                            "main_image": primary,
+                            "all_images": image_string, # <--- All pictures here
                             "product_type": query,
                             "stock": p.get("stock", "In Stock")
                         })
@@ -65,28 +87,17 @@ def main():
                 print(f"Page {page} failed: {e}")
                 break
             
-            # Very short sleep since we aren't worrying about translation blocks
             time.sleep(0.5)
 
     if not final_list:
-        print("Final list is empty! Check your unique-device-id or headers.")
+        print("Final list is empty!")
         return
 
-    # 1. Convert to DataFrame
-    df = pd.DataFrame(final_list)
-
-    # 2. Deduplicate
-    initial_count = len(df)
-    df = df.drop_duplicates(subset=['id'])
-    final_count = len(df)
-
-    # 3. Save to CSV
+    df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
     df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8')
     
-    print(f"\n--- SCRAPING COMPLETE ---")
-    print(f"Total entries found: {initial_count}")
-    print(f"Unique products saved: {final_count}")
-    print(f"File saved as: {OUTPUT_CSV}")
+    print(f"\n--- COMPLETE ---")
+    print(f"Saved {len(df)} products with multi-image support to {OUTPUT_CSV}")
 
 if __name__ == "__main__":
     main()
