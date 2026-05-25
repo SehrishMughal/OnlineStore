@@ -21,7 +21,7 @@ HEADERS = {
 def harvest_urls(data):
     """
     Recursively scans the entire JSON object for any string starting with http.
-    Filters specifically for standard static JPEG images (.jpg, .jpeg, .jif).
+    Filters specifically for standard static JPEG images (.jpg, .jpeg, .jfif).
     """
     urls = []
     if isinstance(data, dict):
@@ -33,8 +33,7 @@ def harvest_urls(data):
     elif isinstance(data, str):
         if data.startswith("http"):
             lower_url = data.lower()
-            # Only allow .jpg, .jpeg, and .jif formats
-            if any(ext in lower_url for ext in [".jpg", ".jpeg", ".jif"]):
+            if any(ext in lower_url for ext in [".jpg", ".jpeg", ".jfif"]):
                 urls.append(data)
     return urls
 
@@ -49,7 +48,6 @@ def main():
             try:
                 response = requests.get(url, headers=HEADERS, timeout=15)
                 if response.status_code == 200:
-                    # Decompress if necessary
                     if 'gzip' in response.headers.get('Content-Encoding', ''):
                         data = json.loads(response.content)
                     else:
@@ -61,10 +59,8 @@ def main():
                     print(f" Page {page}: Processing {len(items)} items...")
                     
                     for p in items:
-                        # Find every URL hidden inside this specific product
                         raw_urls = harvest_urls(p)
                         
-                        # Remove duplicates while keeping the original order
                         unique_urls = []
                         for u in raw_urls:
                             if u not in unique_urls:
@@ -77,31 +73,20 @@ def main():
                         except (ValueError, TypeError):
                             base_price = 0.0
 
-                        # Calculate price with a 40% markup profit rate
                         marked_up_price = math.ceil(base_price * 1.40)
-
-                        # Define title and backup string for fallback matching
                         product_title = p.get("name") or p.get("productName") or "N/A"
 
                         # --- META COMPLIANT FEED MAPPING ---
                         final_list.append({
-                            "id": str(p.get("id") or p.get("productId") or "N/A"),
-                            "title": product_title,
+                            "id": str(p.get("id") or p.get("productId") or "").strip(),
+                            "title": product_title.strip(),
                             "description": p.get("description") or f"Premium {product_title} available at best price.",
-                            
-                            # Meta standard absolute currency formatting string
-                            "price": f"{marked_up_price} PKR",
-                            
-                            # Primary and secondary image lists structured natively
+                            "price": f"{marked_up_price} PKR" if marked_up_price > 0 else "",
                             "image_link": unique_urls[0] if len(unique_urls) > 0 else "",
                             "additional_image_link": ",".join(unique_urls[1:6]) if len(unique_urls) > 1 else "",
-                            
-                            # Required operational static field fallbacks
-                            "link": f"https://yourwebsite.com/products/{p.get('id') or 'shop'}", 
+                            "link": f"https://yourwebsite.com/products/{p.get('id') or ''}", 
                             "availability": "in stock",
                             "condition": "new",
-                            
-                            # Custom reference filtering meta tags
                             "product_type": query
                         })
                 else: 
@@ -113,11 +98,21 @@ def main():
             time.sleep(0.5)
 
     if final_list:
-        # Deduplicate the product list by ID
-        df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
+        df = pd.DataFrame(final_list)
+        
+        # 1. Deduplicate by product ID
+        df.drop_duplicates(subset=['id'], inplace=True)
+        
+        # 2. Convert literal empty strings or whitespace-only strings to NaN
+        df.replace(r'^\s*$', pd.NA, regex=True, inplace=True)
+        
+        # 3. Drop rows where critical catalog fields are empty (e.g., missing ID, Title, Price, or Main Image)
+        critical_fields = ['id', 'title', 'price', 'image_link', 'link']
+        df.dropna(subset=critical_fields, inplace=True)
+        
         df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8')
-        print(f"\n SUCCESS! {len(df)} unique Meta-ready products saved.")
-        print(f" Calculated 40% profit margin into all 'price' fields automatically.")
+        print(f"\n SUCCESS! {len(df)} complete Meta-ready products saved.")
+        print(f" Cleaned up and dropped rows missing critical attributes ({', '.join(critical_fields)}).")
 
 if __name__ == "__main__":
     main()
