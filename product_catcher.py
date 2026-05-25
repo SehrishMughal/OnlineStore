@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import json
 import gzip
+import math
 
 # --- CONFIG ---
 SEARCH_KEYWORDS = ["shirts", "smart watch", "bedsheets", "bags"]
@@ -62,22 +63,45 @@ def main():
                         raw_urls = harvest_urls(p)
                         
                         # Remove duplicates while keeping the original order
-                        # Usually, the best/main image appears first in the JSON
                         unique_urls = []
                         for u in raw_urls:
                             if u not in unique_urls:
                                 unique_urls.append(u)
 
+                        # --- PRICE & PROFIT CALCULATIONS ---
+                        # Extract raw numeric base price (default to 0 if missing)
+                        base_price_raw = p.get('price') or p.get('salePrice') or 0
+                        try:
+                            base_price = float(base_price_raw)
+                        except (ValueError, TypeError):
+                            base_price = 0.0
+
+                        # Calculate price with a 40% markup profit rate
+                        # Formula: Base Price * 1.40 (Ceiled to whole number for clean catalog presentation)
+                        marked_up_price = math.ceil(base_price * 1.40)
+
+                        # Define title and backup string for fallback matching
+                        product_title = p.get("name") or p.get("productName") or "N/A"
+
+                        # --- META COMPLIANT FEED MAPPING ---
                         final_list.append({
-                            "id": p.get("id") or p.get("productId") or "N/A",
-                            "title": p.get("name") or p.get("productName") or "N/A",
-                            "price": f"{p.get('price') or p.get('salePrice') or '0'} PKR",
-                            "image_1": unique_urls[0] if len(unique_urls) > 0 else "",
-                            "image_2": unique_urls[1] if len(unique_urls) > 1 else "",
-                            "image_3": unique_urls[2] if len(unique_urls) > 2 else "",
-                            "image_4": unique_urls[3] if len(unique_urls) > 3 else "",
-                            "image_5": unique_urls[4] if len(unique_urls) > 4 else "",
-                            "image_6": unique_urls[5] if len(unique_urls) > 5 else "",
+                            "id": str(p.get("id") or p.get("productId") or "N/A"),
+                            "title": product_title,
+                            "description": p.get("description") or f"Premium {product_title} available at best price.",
+                            
+                            # Meta standard absolute currency formatting string
+                            "price": f"{marked_up_price} PKR",
+                            
+                            # Primary and secondary image lists structured natively
+                            "image_link": unique_urls[0] if len(unique_urls) > 0 else "",
+                            "additional_image_link": ",".join(unique_urls[1:6]) if len(unique_urls) > 1 else "",
+                            
+                            # Required operational static field fallbacks
+                            "link": f"https://yourwebsite.com/products/{p.get('id') or 'shop'}", 
+                            "availability": "in stock",
+                            "condition": "new",
+                            
+                            # Custom reference filtering meta tags
                             "product_type": query
                         })
                 else: 
@@ -92,8 +116,8 @@ def main():
         # Deduplicate the product list by ID
         df = pd.DataFrame(final_list).drop_duplicates(subset=['id'])
         df.to_csv(OUTPUT_CSV, index=False, encoding='utf-8')
-        print(f"\n SUCCESS! {len(df)} unique products saved.")
-        print(f"Columns filled with both Alibaba (.jpg) and Markaz (.webp) links.")
+        print(f"\n SUCCESS! {len(df)} unique Meta-ready products saved.")
+        print(f" Calculated 40% profit margin into all 'price' fields automatically.")
 
 if __name__ == "__main__":
     main()
