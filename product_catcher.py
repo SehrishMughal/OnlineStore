@@ -21,7 +21,7 @@ HEADERS = {
 def harvest_urls(data):
     """
     Recursively scans the entire JSON object for any string starting with http.
-    This catches .webp thumbnails, alicdn jpgs, and everything in between.
+    Filters specifically for standard static JPEG images (.jpg, .jpeg, .jif).
     """
     urls = []
     if isinstance(data, dict):
@@ -31,9 +31,11 @@ def harvest_urls(data):
         for item in data:
             urls.extend(harvest_urls(item))
     elif isinstance(data, str):
-        # We look for any URL that looks like an image
-        if data.startswith("http") and any(ext in data.lower() for ext in [".jpg", ".png", ".webp", "ibank", "thumbnails"]):
-            urls.append(data)
+        if data.startswith("http"):
+            lower_url = data.lower()
+            # Only allow .jpg, .jpeg, and .jif formats
+            if any(ext in lower_url for ext in [".jpg", ".jpeg", ".jif"]):
+                urls.append(data)
     return urls
 
 def main():
@@ -69,7 +71,6 @@ def main():
                                 unique_urls.append(u)
 
                         # --- PRICE & PROFIT CALCULATIONS ---
-                        # Extract raw numeric base price (default to 0 if missing)
                         base_price_raw = p.get('price') or p.get('salePrice') or 0
                         try:
                             base_price = float(base_price_raw)
@@ -77,7 +78,6 @@ def main():
                             base_price = 0.0
 
                         # Calculate price with a 40% markup profit rate
-                        # Formula: Base Price * 1.40 (Ceiled to whole number for clean catalog presentation)
                         marked_up_price = math.ceil(base_price * 1.40)
 
                         # Define title and backup string for fallback matching
