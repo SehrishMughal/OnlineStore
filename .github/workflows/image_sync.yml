@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'Markaz_Catalouge.csv'   # Runs automatically whenever you update your CSV file
+      - 'Markaz_Catalog.csv'   # Runs automatically whenever you update your CSV file
   workflow_dispatch:     # Allows you to press a button manually to trigger it
 
 jobs:
