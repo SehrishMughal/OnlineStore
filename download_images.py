@@ -80,8 +80,10 @@ with open(CSV_FILE, mode='r', newline='', encoding='utf-8') as file:
         TEMP_ROWS.append(row)
 
 # Overwrite the CSV with updated clean URLs
+# Overwrite the CSV with updated clean URLs and strict quoting rules
 with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as file:
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
+    # QUOTE_MINIMAL forces quotes around fields that contain commas!
+    writer = csv.DictWriter(file, fieldnames=fieldnames, quoting=csv.QUOTE_MINIMAL)
     writer.writeheader()
     writer.writerows(TEMP_ROWS)
 
