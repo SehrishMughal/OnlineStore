@@ -1,0 +1,36 @@
+name: Automated Image Link Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Markaz_Catalouge.csv'   # Runs automatically whenever you update your CSV file
+  workflow_dispatch:     # Allows you to press a button manually to trigger it
+
+jobs:
+  sync-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write    # Grants permission to commit the downloaded files back
+
+    steps:
+    - name: Checkout Code Base
+      uses: actions/checkout@v4
+
+    - name: Initialize Python Environment
+      uses: actions/setup-python@v5
+      with:
+        python-python: '3.10'
+
+    - name: Install Network Requirements
+      run: pip install requests
+
+    - name: Run Processing Automation
+      run: python download_images.py
+
+    - name: Commit and Push Changes to Main
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Automated sync: Converted platform images to local repo raw links"
+        branch: main
