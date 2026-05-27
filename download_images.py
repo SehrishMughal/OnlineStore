@@ -7,7 +7,7 @@ IMAGE_DIR = "images"
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
 
-CSV_FILE = "products.csv"  # Rename this if your CSV file has a different name
+CSV_FILE = "markaz_catalog.csv"  # Rename this if your CSV file has a different name
 TEMP_ROWS = []
 
 # Headers to mimic a real web browser to bypass the scraper block
