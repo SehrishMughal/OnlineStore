@@ -15,8 +15,8 @@ IMAGE_DIR = "images"
 
 # --- GITHUB CONFIGURATION ---
 # Replace these with your actual GitHub repository details
-GITHUB_USERNAME = "YOUR_GITHUB_USERNAME"
-GITHUB_REPO = "YOUR_REPO_NAME"
+GITHUB_USERNAME = "SehrishMughal"
+GITHUB_REPO = "OnlineStore"
 
 # Create local image directory if it doesn't exist
 if not os.path.exists(IMAGE_DIR):
@@ -155,7 +155,7 @@ def main():
                             "description": product_desc[:4900],  
                             "price": f"{marked_up_price} PKR",
                             "image_link": image_link,
-                            "additional_image_link": additional_image_link,
+                            "additional_image_link": """ " """ + additional_image_link + """ " """ ,
                             "link": f"https://yourwebsite.com/products/{product_id}", 
                             "availability": "in stock",
                             "condition": "new",
